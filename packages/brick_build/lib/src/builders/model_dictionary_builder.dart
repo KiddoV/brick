@@ -64,7 +64,11 @@ class ModelDictionaryBuilder<_ClassAnnotation> extends BaseBuilder<_ClassAnnotat
       {
         for (final annotation in annotations)
           '${annotation.element.name}': filesToContents.entries
-              .firstWhere((entry) => entry.value.contains(RegExp(r'class\s+${annotation.element.name}\s*')))
+              .firstWhere(
+                (entry) =>
+                    entry.key.endsWith('.model.dart') && // Only use model files
+                    entry.value.contains(RegExp('class\\s+${annotation.element.name}\\b')),
+              )
               .key
               // Make relative from the `brick/` folder
               .replaceAll(RegExp('^lib/'), '../'),
