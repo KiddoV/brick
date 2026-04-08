@@ -28,8 +28,18 @@ class SharedChecker<_SiblingModel extends Model> {
   /// the same domain or provider (e.g. `SqliteModel`).
   SharedChecker(this.targetType);
 
-  /// Retrieves type argument, i.e. `Type` in `Future<Type>` or `List<Type>`
-  DartType get argType => (targetType as InterfaceType).typeArguments.first;
+  /// Gets `T` from `List<T>` / `Future<T>`, or fallback for typed lists
+  DartType get argType {
+    final type = targetType as InterfaceType;
+    if (type.typeArguments.isNotEmpty) {
+      return type.typeArguments.first;
+    }
+    // Fallback for typed data lists
+    if (isList || isIterable) {
+      return type.element.library.typeProvider.intType;
+    }
+    throw StateError('No type argument for $targetType');
+  }
 
   ///
   Type get asPrimitive {
@@ -125,9 +135,9 @@ class SharedChecker<_SiblingModel extends Model> {
 
   ///
   bool get isIterable =>
-      _iterableChecker.isExactlyType(targetType) ||
-      _listChecker.isExactlyType(targetType) ||
-      _setChecker.isExactlyType(targetType);
+      _iterableChecker.isAssignableFromType(targetType) ||
+      _listChecker.isAssignableFromType(targetType) ||
+      _setChecker.isAssignableFromType(targetType);
 
   ///
   bool get isList => _listChecker.isExactlyType(targetType);
