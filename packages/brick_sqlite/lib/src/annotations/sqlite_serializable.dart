@@ -9,9 +9,13 @@ class SqliteSerializable {
   /// [Sqlite]'s `#nullable` takes precedence. Defaults to `true`.
   final bool nullable;
 
+  ///
+  final String? tableName;
+
   /// Creates a new [SqliteSerializable] instance.
   const SqliteSerializable({
     bool? nullable,
+    this.tableName,
   }) : nullable = nullable ?? true;
 
   /// An instance of [SqliteSerializable] with all fields set to their default
