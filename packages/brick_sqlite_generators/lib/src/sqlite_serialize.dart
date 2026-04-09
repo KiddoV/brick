@@ -256,7 +256,8 @@ class SqliteSerialize<_Model extends SqliteModel> extends SqliteSerdesGenerator<
         args,
       );
 
-      if (results.isEmpty || results.first.isEmpty) {
+      // SQFlite returns [{}] when no results are found
+      if (results.isEmpty || (results.length == 1 && results.first.isEmpty)) {
         return null;
       }
 
