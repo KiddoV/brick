@@ -227,28 +227,36 @@ class SqliteSerialize<_Model extends SqliteModel> extends SqliteSerdesGenerator<
   String generateUniqueSqliteFunction(Map<String, String> uniqueFields) {
     final functionDeclaration =
         '@override\nFuture<int?> primaryKeyByUniqueColumns(${element.name} instance, DatabaseExecutor executor) async';
-    final whereStatement = <String>[];
-    final valuesStatement = <String>[];
-    final selectStatement = <String>[];
 
-    for (final entry in uniqueFields.entries) {
-      whereStatement.add('${entry.value} = ?');
-      valuesStatement.add('instance.${entry.key}');
-      selectStatement.add(entry.value);
-    }
-
-    if (selectStatement.isEmpty && whereStatement.isEmpty) {
+    if (uniqueFields.isEmpty) {
       return '$functionDeclaration => instance.primaryKey;';
     }
 
     return """$functionDeclaration {
-      final results = await executor.rawQuery('''
-        SELECT * FROM `$tableName` WHERE ${whereStatement.join(' OR ')} LIMIT 1''',
-        [${valuesStatement.join(',')}]
+      final where = <String>[];
+      final args = <Object?>[];
+
+      final fields = <String, Object?>{
+        ${uniqueFields.entries.map((e) => "'${e.value}': instance.${e.key}").join(',\n    ')}
+      };
+
+      for (final entry in fields.entries) {
+        if (entry.value != null) {
+          where.add('\${entry.key} = ?');
+          args.add(entry.value);
+        }
+      }
+
+      if (where.isEmpty) {
+        return null;
+      }
+
+      final results = await executor.rawQuery(
+        'SELECT * FROM `$tableName` WHERE ' + where.join(' OR ') + ' LIMIT 1',
+        args,
       );
 
-      // SQFlite returns [{}] when no results are found
-      if (results.isEmpty || (results.length == 1 && results.first.isEmpty)) {
+      if (results.isEmpty || results.first.isEmpty) {
         return null;
       }
 
