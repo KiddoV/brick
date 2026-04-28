@@ -279,9 +279,14 @@ class SupabaseProvider implements Provider<SupabaseModel> {
 
     final builder = adapter.uniqueFields.fold(builderFilter, (acc, uniqueFieldName) {
       final columnName = adapter.fieldsToSupabaseColumns[uniqueFieldName]!.columnName;
-      if (serializedInstance.containsKey(columnName)) {
-        return acc.eq(columnName, serializedInstance[columnName]);
+      final value = serializedInstance[columnName];
+
+      // Supabase `.eq()` does not accept null values.
+      // Skip nullable unique fields when building conflict/update filters.
+      if (value != null) {
+        return acc.eq(columnName, value);
       }
+
       return acc;
     });
     final resp = await builder.select(queryTransformer.selectFields).limit(1).maybeSingle();
