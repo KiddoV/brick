@@ -66,9 +66,15 @@ class SqliteDeserialize<_Model extends SqliteModel> extends SqliteSerdesGenerato
     // DateTime
     if (checker.isDateTime) {
       if (checker.isNullable) {
-        return '$fieldValue == null ? null : DateTime.tryParse($fieldValue$defaultValue as String)';
+        if (fieldAnnotation.defaultValue != null) {
+          return '$fieldValue == null ? null : DateTime.tryParse(($fieldValue as String?)$defaultValue)';
+        }
+        return '$fieldValue == null ? null : DateTime.tryParse($fieldValue as String)';
       }
-      return 'DateTime.parse($fieldValue$defaultValue as String)';
+      if (fieldAnnotation.defaultValue != null) {
+        return 'DateTime.parse(($fieldValue as String?)$defaultValue)';
+      }
+      return 'DateTime.parse($fieldValue as String)';
 
       // bool
     } else if (checker.isBool) {
@@ -76,9 +82,11 @@ class SqliteDeserialize<_Model extends SqliteModel> extends SqliteSerdesGenerato
 
       // double, int, String
     } else if (checker.isDartCoreType) {
-      return '$fieldValue as ${field.type}$defaultValue';
-
-      // Iterable
+      final typeName = SharedChecker.withoutNullability(field.type);
+      if (fieldAnnotation.defaultValue != null) {
+        return '($fieldValue as $typeName?)$defaultValue';
+      }
+      return '$fieldValue as ${field.type}';
     } else if (checker.isIterable) {
       final argTypeChecker = SharedChecker<SqliteModel>(checker.argType);
       final argType = checker.unFuturedArgType;
@@ -207,6 +215,9 @@ class SqliteDeserialize<_Model extends SqliteModel> extends SqliteSerdesGenerato
         final nullablePrefix = checker.isNullable
             ? "$fieldValue == null ? ${fieldAnnotation.defaultValue ?? 'null'} : "
             : '';
+        if (fieldAnnotation.defaultValue != null) {
+          return '$nullablePrefix${SharedChecker.withoutNullability(field.type)}.values.byName(($fieldValue as String?)$defaultValue)';
+        }
         return '$nullablePrefix${SharedChecker.withoutNullability(field.type)}.values.byName($fieldValue as String)';
       }
 
@@ -221,6 +232,9 @@ class SqliteDeserialize<_Model extends SqliteModel> extends SqliteSerdesGenerato
     } else if (checker.fromJsonConstructor != null) {
       final klass = checker.targetType.element! as ClassElement;
       final parameterType = checker.fromJsonConstructor!.formalParameters.first.type;
+      if (fieldAnnotation.defaultValue != null) {
+        return '${klass.displayName}.fromJson(jsonDecode(($fieldValue as String?)$defaultValue) as ${parameterType.getDisplayString()})';
+      }
       return '${klass.displayName}.fromJson(jsonDecode($fieldValue as String) as ${parameterType.getDisplayString()})';
     }
 
